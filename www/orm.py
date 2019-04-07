@@ -19,13 +19,13 @@ async def create_pool(loop, **kw):
 		host = kw.get('host','localhost'), #如果有对应的'host'，返回对应的值，否则返回默认值'localhost'
 		port = kw.get('port',3306),
 		user=kw['user'],
-        password=kw['password'],
-        db=kw['db'],
-        charset=kw.get('charset', 'utf8'),
-        autocommit=kw.get('autocommit', True),
-        maxsize=kw.get('maxsize', 10),
-        minsize=kw.get('minsize', 1),
-        loop=loop
+		password=kw['password'],
+		db=kw['database'],
+		charset=kw.get('charset', 'utf8'),
+		autocommit=kw.get('autocommit', True),
+		maxsize=kw.get('maxsize', 10),
+		minsize=kw.get('minsize', 1),
+		loop=loop
 	)
 
 async def select(sql, args, size=None):
@@ -86,7 +86,7 @@ class StringField(Field):
 class BooleanField(Field):
 
 	def __init__(self, name=None, default=False):
-        super().__init__(name, 'boolean', False, default)
+		super().__init__(name, 'boolean', False, default)
 
 class IntegerField(Field):
 
@@ -101,7 +101,7 @@ class FloatField(Field):
 class TextField(Field):
 
 	def __init__(self, name=None, default=None):
-		super.__init__(name, 'text', default)
+		super().__init__(name, 'text', False, default)
 
 # 定义元类，目的是将一个数据表映射为一个封装类
 class ModelMetaclass(type):
@@ -128,7 +128,7 @@ class ModelMetaclass(type):
 			raise StandardError('primary key not found.')
 		for k in mappings.keys():
 			attrs.pop(k) # 从类属性中删除Field属性（Field属性都储存在了mappings中）
-		escaped_fileds = list(map(lambda f: '`%s`' % f, fields)) # 将除了主键以外的表属性转化为sql语法格式
+		escaped_fields = list(map(lambda f: '`%s`' % f, fields)) # 将除了主键以外的表属性转化为sql语法格式
 		attrs['__mappings__'] = mappings
 		attrs['__table__'] = tableName
 		attrs['__primary_key__'] = primaryKey
@@ -192,7 +192,7 @@ class Model(dict, metaclass=ModelMetaclass):
 			else:
 				raise ValueError('Invalid limit value: %s' % str(limit))
 		rs = await select(' '.join(sql), args)
-	        return [cls(**r) for r in rs]
+		return [cls(**r) for r in rs]
 
 	@classmethod
 	async def findNumber(cls, selectField, where=None, args=None):
@@ -210,27 +210,27 @@ class Model(dict, metaclass=ModelMetaclass):
 	async def find(cls, pk):
 		' find object by primary key '
 		rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
-		if len(rs)==0
+		if len(rs)==0:
 			return None
 		return cls(**rs[0])
 
 	async def save(self):
 		args = list(map(self.getValueOrDefault, self.__fields__))
-	        args.append(self.getValueOrDefault(self.__primary_key__))
-	        rows = await execute(self.__insert__, args)
-	        if rows != 1:
-	            logging.warn('failed to insert record: affected rows: %s' % rows)
+		args.append(self.getValueOrDefault(self.__primary_key__))
+		rows = await execute(self.__insert__, args)
+		if rows != 1:
+			logging.warn('failed to insert record: affected rows: %s' % rows)
 
 	async def update(self):
 		args = list(map(self.getValue, self.__fields__))
-        args.append(self.getValue(self.__primary_key__))
-        rows = await execute(self.__update__, args)
-        if rows != 1:
-            logging.warn('failed to update by primary key: affected rows: %s' % rows)
+		args.append(self.getValue(self.__primary_key__))
+		rows = await execute(self.__update__, args)
+		if rows != 1:
+			logging.warn('failed to update by primary key: affected rows: %s' % rows)
 
-    async def remove(self):
-        args = [self.getValue(self.__primary_key__)]
-        rows = await execute(self.__delete__, args)
-        if rows != 1:
-            logging.warn('failed to remove by primary key: affected rows: %s' % rows)
+	async def remove(self):
+		args = [self.getValue(self.__primary_key__)]
+		rows = await execute(self.__delete__, args)
+		if rows != 1:
+			logging.warn('failed to remove by primary key: affected rows: %s' % rows)
 
