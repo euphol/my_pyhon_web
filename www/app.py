@@ -36,7 +36,7 @@ def init_jinja2(app, **kw):
 	if filters is not None:
 		for name, f in filters.items():
 			env.filters[name] = f
-	app['__tamplating__'] = env
+	app['__templating__'] = env
 
 # 定义middleware（一种拦截器），middleware在request被处理前生效，目的是实现通用功能
 # middleware 为工厂函数
@@ -108,8 +108,8 @@ async def init(loop):
 	init_jinja2(app, filters=dict(datetime=datetime_filter))
 	add_routes(app, 'handlers')
 	add_static(app)
-	srv = yield from loop.create_server(app.make_handler(),'127.0.0.1',9000)
-	logging.info('server started at http://127.0.0.1:9000...')
+	srv = await loop.create_server(app.make_handler(),'127.0.0.1',80)
+	logging.info('server started at http://127.0.0.1:80...')
 	return srv
 
 loop = asyncio.get_event_loop()

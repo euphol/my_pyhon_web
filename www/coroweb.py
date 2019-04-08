@@ -17,7 +17,7 @@ def request(path, method):
 	def decorator(func):
 		@functools.wraps(func)
 		def wrapper(*args, **kw):
-			return func(**args, **kw)
+			return func(*args, **kw)
 		wrapper.__method__ = method
 		wrapper.__route__ = path
 		return wrapper
@@ -30,7 +30,7 @@ post = functools.partial(request, method='POST')
 # 用RequestHandler将URL函数封装为一个coroutine，确定参数后进行调用，实现response
 # 用URL函数初始化一个RequestHandler实例，由于有__call__，该实例可以作为一个函数接受request
 # 从request中提取所需要的参数，利用封装好的URL函数完成request的处理和response
-def RequestHandler(object):
+class RequestHandler(object):
 
 	def __init__(self, func):
 		self._func = asyncio.coroutine(func) # 将URL函数封装为coroutine
@@ -41,7 +41,7 @@ def RequestHandler(object):
 		logging.info('required args: %s' % required_args)
 
 		# 判断request中的参数是否是URL函数所需要的，是则提取出来
-		kw = {arg: value for arg, value in request.__data__.items() if arg in required_args}
+		kw = {arg: value for arg, value in request.__dict__.items() if arg in required_args}
 
 		# 提取match_info参数
 		kw.update(request.match_info)
@@ -76,10 +76,10 @@ def add_routes(app, module_name):
 		if attr.startswith('_'): # 排除以'_'开头的属性
 			continue
 		func = getattr(mod, attr) # 获取属性内容
-		if callable(func) and hasattr(func, '__method__') and hasattr('__route__'): # 判断是否为URL处理函数
+		if callable(func) and hasattr(func, '__method__') and hasattr(func, '__route__'): # 判断是否为URL处理函数
 			args = ', '.join(inspect.signature(func).parameters.keys())
 			logging.info('add route %s %s => %s(%s)' % (func.__method__, func.__route__, func.__name__, args))
-			app.router.add_routes(func.__method__, func.__route__, RequestHandler(func)) # 生成RequestHandler实例，添加到路由中
+			app.router.add_route(func.__method__, func.__route__, RequestHandler(func)) # 生成RequestHandler实例，添加到路由中
 
 def add_static(app):
 	path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
